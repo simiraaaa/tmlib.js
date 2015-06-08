@@ -35,6 +35,7 @@ module.exports = function(grunt) {
     "src/util/type.js",
     "src/util/flow.js",
     "src/util/gridsystem.js",
+    "src/util/log.js",
 
     "src/geom/vector2.js",
     "src/geom/vector3.js",
@@ -65,6 +66,7 @@ module.exports = function(grunt) {
     "src/input/mouse.js",
     "src/input/touch.js",
     "src/input/accelerometer.js",
+    "src/input/flick.js",
 
     "src/graphics/color.js",
     "src/graphics/canvas.js",
@@ -93,6 +95,7 @@ module.exports = function(grunt) {
     "src/display/animationsprite.js",
     "src/display/mapsprite.js",
     "src/display/renderer.js",
+    "src/display/arrow.js",
     
     "src/ui/userinterface.js",
     "src/ui/button.js",

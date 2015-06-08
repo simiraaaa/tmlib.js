@@ -2046,7 +2046,35 @@ tm.event = tm.event || {};
 tm.util = tm.util || {};
 
 
-(function() {
+(function () {
+
+    var MAX = 4294967295;
+    var seed = ~~(Math.random() * MAX);
+    var y = seed;
+
+    //擬似乱数(符号付き32bit)
+    function xor32() {
+        y = y ^ (y << 13);
+        y = y ^ (y >>> 17);
+        return (y = (y ^ (y << 5)));
+    }
+
+    //0～0.9999....
+    function random() {
+        return (xor32() >>> 0) / MAX;
+    }
+    random.xor32 = xor32;
+
+    /*
+     * 新しいシードをセットする
+     * シードは0以外の符号付き32bitの範囲なら何でも良い
+     */
+    random.accessor('seed', {
+        set: function (newSeed) {y = seed = newSeed || 1;},
+        get: function () { return seed;}
+    });
+    random.MAX = MAX;
+    tm.util.Random = random;
     
     /**
      * @class tm.util.Random
@@ -2059,7 +2087,7 @@ tm.util = tm.util || {};
      * - <http://libcinder.org/docs/v0.8.3/classcinder_1_1_rand.html>
      * - <http://libcinder.org/docs/v0.8.3/_rand_8h_source.html>
      */
-    tm.util.Random = {
+    tm.util.Random.$extend({
         
         /**
          * Dummy
@@ -2081,7 +2109,7 @@ tm.util = tm.util || {};
         randbool: function() {
             return this.randint(0, 1) === 1;
         },
-    };
+    });
     
 })();
 
@@ -2869,6 +2897,216 @@ tm.define("tm.util.GridSystem", {
         return this.unitWidth * (this.col/2);
     },
 });
+
+/// <reference path="tmlib.js"/>
+
+/*
+ * log.js
+ */
+
+
+(function (tm, undefined) {
+
+    /**
+     * @class tm.util.Log
+     * ログの記録。読み込み、出力を行う
+     */
+    tm.define("tm.util.Log", {
+        superClass: tm.event.EventDispatcher,
+        log: null,
+        isMin: false,
+        min: null,
+        maxLength: Infinity,
+        length:0,
+
+        init: function (path) {
+            this.superInit();
+            path ? this.load(path) : this.log = { _order: [] };
+        },
+
+        /**
+         * ログをどれだけ取るか。
+         */
+        setMaxLength:function (len) {
+            this.maxLength = len;
+            return this;
+        },
+
+        /**
+         * ログを取るプロパティを作る
+         * @param names [name, name,,,]
+         */
+        create: function (names) {
+            var log = this.log;
+            names.forEach(function (e) {
+                if (log[e]) log._order.erase(e);
+                log[e] = [];
+                log._order.push(e);
+            });
+            return this;
+        },
+
+        /**
+         * ログを取るプロパティを作る。
+         * 既に存在する場合は無視する
+         * @param names [name, name,,,]
+         */
+        safeCreate: function (names) {
+            var log = this.log;
+            names.forEach(function (e) {
+                if (log[e]) return;
+                log[e] = [];
+                log._order.push(e);
+            });
+            return this;
+        },
+
+
+        /**
+         * ログを記録する。
+         * 存在しないプロパティに対してpushした場合はError
+         * @param prop 
+         * {
+         *  name:value,
+         *  name:value,,,,
+         * }
+         */
+        push: function (prop) {
+            if (this.length > this.maxLength) return this;
+            this.length++;
+            for (var k in prop) {
+                this.log[k].push(prop[k]);
+            }
+            return this;
+        },
+
+        /**
+         * ログを記録する。
+         * 存在しないプロパティに対してpushする場合は新たにプロパティを作る
+         * @param prop 
+         * {
+         *  name:value,
+         *  name:value,,,,
+         * }
+         */
+        safePush: function (prop) {
+            if (this.length > this.maxLength) return this;
+            this.length++;
+            var log = this.log;
+            for (var k in prop) {
+                if (!log[k]) {
+                    log[k] = [];
+                    log._order.push(k);
+                }
+                log[k].push(prop[k]);
+            }
+            return this;
+        },
+
+        /**
+         * ログを圧縮する。
+         */
+        minify: function () {
+            //todo 圧縮
+            this.min; //圧縮
+            this.isMin = true;
+            return this;
+        },
+
+        /**
+         * ログを解凍する。
+         */
+        parse: function () {
+            //解凍
+            return this;
+        },
+
+
+        /**
+         * ログを出力する。
+         * @param title ファイル名 title.json となる
+         */
+        download: function (title) {
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(this.createBlob());
+            a.download = title + ".json";
+            a.click();
+            return this;
+        },
+
+
+        /**
+         * ログを読み込むする。
+         * @param title
+         *  tm.asset.AssetManager.get(title)
+         */
+        load: function (title) {
+            this.log = tm.asset.AssetManager.get(title).data;
+            return this;
+        },
+
+
+        /**
+         * ログを読み込むする。
+         * @param path
+         *  
+         */
+        loadByPath: function (path) {
+            //tm.asset.Loader?
+        },
+
+
+        /**
+         * jsonファイルを作る
+         */
+        createBlob: function () {
+            var json = this.isMin ? this.min : this.log;
+            return new Blob([JSON.stringify(json)], { type: 'application/json' });
+        },
+
+        /**
+         * 要素からログを取る
+         * enterframeで自動的に取る
+         * @param elm Sceneに追加されているawakeなElement
+         * @param names [properties]
+         */
+        fromElement: function (elm, names) {
+            this.create(names);
+            var self = this;
+            elm.on('enterframe', function (e) {
+                var obj = {};
+                names.forEach(function (e) {
+                    obj[e] = elm[e];
+                });
+                self.push(obj);
+            });
+            return this;
+        },
+
+        /**
+         * ログからElementにプロパティを代入していく
+         * updateを上書きする
+         * @param elm Sceneに追加されているawakeなElement
+         */
+        play: function (elm) {
+            var log = this.log;
+            elm.update = function (app) {
+                log._order.forEach(function (e) {
+                    var prop = log[e];
+                    if(prop.length)elm[e] = prop.shift();
+                });
+            };
+            return this;
+        },
+
+
+
+
+    });
+
+
+})(tm);
+
 
 /*
  * vector2.js
@@ -8987,6 +9225,80 @@ tm.input = tm.input || {};
     
 })();
 
+
+/// <reference path="tmlib.js"/>
+
+(function (tm) {
+
+    var Math = tm.global.Math;
+
+    //�萔
+    var
+        NONE = -1,
+        LEFT = 1,
+        UP = 2,
+        RIGHT = 3,
+        DOWN = 4;
+
+
+
+
+    tm.define('tm.input.Flick', {
+
+        xList: null,
+        yList: null,
+
+
+        init: function () {
+            this.xList = [];
+            this.yList = [];
+        },
+
+        clear: function () {
+            this.xList.length = this.yList.length = 0;
+        },
+
+        push: function (x, y) {
+            var xlist = this.xList;
+            var ylist = this.yList;
+            xlist.push(x);
+            ylist.push(y);
+            if (xlist.length > 10) {
+                xlist.shift();
+                ylist.shift();
+            }
+        },
+
+        getAverage: function () {
+            return tm.geom.Vector2(this.xList.average(), this.yList.average());
+        },
+
+        getDirection: function () {
+            var delta = this.getAverage();
+            this.clear();
+
+            if (delta.lengthSquared() > 2) {
+                var x = delta.x, y = delta.y;
+                if (Math.abs(x) < Math.abs(y)) {
+                    return y < 0 ? UP : DOWN;
+                } else {
+                    return x < 0 ? LEFT : RIGHT;
+                }
+            }
+            return NONE;
+        },
+
+    });
+
+    tm.input.Flick.$extend({
+        LEFT: LEFT,
+        UP: UP,
+        RIGHT: RIGHT,
+        DOWN: DOWN,
+        NONE: NONE,
+    });
+
+})(tm);
 
 /*
  * color.js
@@ -16211,6 +16523,128 @@ tm.display = tm.display || {};
 
 
 
+/// <reference path="tmlib.js"/>
+
+(function (tm, undefined) {
+
+    var Math = tm.global.Math;
+
+    var ARROW_LABELS = {
+        '-1': '�~',
+        1: '��',
+        2: '��',
+        3: '��',
+        4: '��',
+        0: '�E'
+    };
+
+
+    var ARROW_DIRECTIONS = {
+        '-1': { x: 0, y: 0 },
+        0: { x: 0, y: 0 },
+        1: { x: -1, y: 0 },
+        2: { x: 0, y: -1 },
+        3: { x: 1, y: 0 },
+        4: { x: 0, y: 1 },
+
+    };
+
+    var ARROW_COLORS = {
+        '-1': 'silver',
+        1: 'lime',
+        2: 'blue',
+        3: 'red',
+        4: 'orange',
+        0: 'white'
+    };
+
+
+    var Arrow = tm.define('tm.display.Arrow', {
+        superClass: "tm.display.CircleShape",
+
+
+        directions: null,
+        removeX: 320,
+        removeY: 480,
+
+        defaultX: 320,
+        defaultY: 480,
+
+
+
+        /**
+        * @param directions Array{Number} or Number
+        */
+        init: function (directions, param) {
+            if (directions === undefined) direction = [Arrow.getRandomDirection()];
+            this.superInit({
+                width: 256,
+                height: 256,
+                strokeStyle: 'rgba(0,0,0,0.3)',
+                lineWidth: 8
+            });
+
+            this.$extend(param || {});
+
+            if (!directions.length) directions = [directions];
+            this.directions = directions;
+            this.fillStyle = directions[0];
+
+            this.createArrowLabel();
+
+        },
+
+        check: function (directions) {
+            if (!directions.length) {
+                return -1 !== this.directions.indexOf(directions);
+            }
+            return this.directions.some(function (d) {
+                return -1 !== directions.indexOf(d);
+            })
+        },
+
+        bye: function (direction) {
+            var v = ARROW_DIRECTIONS[direction];
+            var self = this;
+            this.tweener.clear().by({
+                x: v.x * this.removeX,
+                y: v.y * this.removeY,
+                alpha: -1,
+            }, 500, 'easeOutCirc').call(function () {
+                self.remove();
+            });
+        },
+
+        createArrowLabel: function () {
+            var self = this;
+            var min = Math.min(this.width,this.height);
+            this.directions.forEach(function (d) {
+                self.addChild(tm.display.Label(ARROW_LABELS[d], min));
+            });
+        },
+
+        moveToDefault: function () {
+            return this.move(this.defaultX, this.defaultY);
+        },
+
+        move: function (x, y) {
+            this.tweener.clear().to({
+                x: x, y: y
+            }, 500, 'easeOutCirc');
+            return this;
+        }
+    });
+
+
+    Arrow.$extend({
+        getRandomDirection: function () {
+            var directions = [-1, 1, 2, 3, 4];
+            return directions.shuffle()[0];
+        }
+    });
+
+
+})(tm);
 /*
  * userinterface.js
  */
