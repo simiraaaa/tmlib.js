@@ -121,7 +121,7 @@
 
     }).prototype.accessor('g', {
         get: function () { return this._g; },
-        set: tm.input.Shake.prototype.setThresholdByGravity,
+        set: tm.input.ShakeSensor.prototype.setThresholdByGravity,
     });
 
 }(tm);
