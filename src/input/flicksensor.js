@@ -4,7 +4,7 @@
 
     var Math = tm.global.Math;
 
-    //�萔
+    //定数
     var
         NONE = -1,
         LEFT = 1,
@@ -15,7 +15,7 @@
 
 
 
-    tm.define('tm.input.Flick', {
+    tm.define('tm.input.FlickSensor', {
 
         xList: null,
         yList: null,
@@ -62,7 +62,7 @@
 
     });
 
-    tm.input.Flick.$extend({
+    tm.input.FlickSensor.$extend({
         LEFT: LEFT,
         UP: UP,
         RIGHT: RIGHT,
