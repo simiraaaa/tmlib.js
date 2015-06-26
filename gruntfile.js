@@ -67,6 +67,7 @@ module.exports = function(grunt) {
     "src/input/touch.js",
     "src/input/accelerometer.js",
     "src/input/flicksensor.js",
+    "src/input/shakesensor.js",
 
     "src/graphics/color.js",
     "src/graphics/canvas.js",
