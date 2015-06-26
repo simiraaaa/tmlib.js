@@ -5,7 +5,35 @@
 tm.util = tm.util || {};
 
 
-(function() {
+(function () {
+
+    var MAX = 4294967295;
+    var seed = ~~(Math.random() * MAX);
+    var y = seed;
+
+    //擬似乱数(符号付き32bit)
+    function xor32() {
+        y = y ^ (y << 13);
+        y = y ^ (y >>> 17);
+        return (y = (y ^ (y << 5)));
+    }
+
+    //0～0.9999....
+    function random() {
+        return (xor32() >>> 0) / MAX;
+    }
+    random.xor32 = xor32;
+
+    /*
+     * 新しいシードをセットする
+     * シードは0以外の符号付き32bitの範囲なら何でも良い
+     */
+    random.accessor('seed', {
+        set: function (newSeed) {y = seed = newSeed || 1;},
+        get: function () { return seed;}
+    });
+    random.MAX = MAX;
+    tm.util.Random = random;
     
     /**
      * @class tm.util.Random
@@ -18,7 +46,7 @@ tm.util = tm.util || {};
      * - <http://libcinder.org/docs/v0.8.3/classcinder_1_1_rand.html>
      * - <http://libcinder.org/docs/v0.8.3/_rand_8h_source.html>
      */
-    tm.util.Random = {
+    tm.util.Random.$extend({
         
         /**
          * Dummy
@@ -40,6 +68,6 @@ tm.util = tm.util || {};
         randbool: function() {
             return this.randint(0, 1) === 1;
         },
-    };
+    });
     
 })();
