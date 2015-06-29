@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>test | tmlib.js</title>
+<script src="build/tmlib.js"></script>
+<style>
+html,body{
+width:100%;
+height:100%;
+margin:0;
+padding:0;
+}
+</style>
+</head>
+<body>
+<textarea id="text" style="margin:0 10px;width:90%;height:40%;"></textarea>
+
+<p><button  type="button" id="eval">実行</button></p>
+<form id="oneform">
+<input id="oneline" style="margin:0 10px;width:90%;"/>
+</form>
+<div style="margin:0 10px;overflow:scroll;height:20%;width:90%;">
+<p><span style="color:black;" id="result"></span></p>
+</div>
+<div style="margin:0 10px;overflow:scroll;height:20%;width:90%;">
+<p><span style="color:red;" id="error"></span></p>
+</div>
+<script>
+
+(function(){
+var text = document.getElementById('text');
+var button = document.getElementById('eval');
+var error = document.getElementById('error');
+var result = document.getElementById('result');
+var line = document.getElementById('oneline');
+var form = document.getElementById('oneform');
+form.onsubmit = function(e){
+
+e.preventDefault();
+try{
+res = eval(line.value) +'<br>'+  res;
+}catch(e){err = e +'<br>'+ err;}
+line.value  ="";
+error.innerHTML = err;
+
+result.innerHTML = res;
+return false;};
+
+var res = "";
+var err = "";
+button.onclick = function(){
+try{
+res = eval(text.value) +'<br>'+ res;
+}catch(e){err = e +'<br>'+err;}
+
+error.innerHTML = err;
+result.innerHTML = res;
+};
+
+
+})();
+
+</script>
+</body>
+</html>
