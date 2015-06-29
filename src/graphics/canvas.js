@@ -892,6 +892,24 @@ tm.graphics = tm.graphics || {};
         getElement: function() {
             return this.element;
         },
+
+        /**
+         * 自分と同じ内容を描画したCanvas取得
+         */
+        clone: function (rate) {
+            rate = rate || 1;
+
+            var out = tm.graphics.Canvas();
+            var bg = this.element.style.background;
+            var width = this.width * rate,
+                height = this.height * rate;
+
+            out.resize(width, height);
+            bg && out.clearColor(this.element.style.background);
+            out.drawImage(this.element, 0, 0, this.width, this.height, 0, 0, width, height);
+
+            return out;
+        },
     });
     
     /** @static @property */
