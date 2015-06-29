@@ -9304,7 +9304,7 @@ tm.input = tm.input || {};
  * shakesensor.js
  */
 
-!function (tm, undefined) {
+!function (tm) {
     var Math = tm.global.Math;
     //tm.input.ShakeSensor
     tm.define('tm.input.ShakeSensor', {
@@ -9312,8 +9312,9 @@ tm.input = tm.input || {};
 
         accelerometer: null,
         gravity: null,
+        shaking: null,
 
-        temp: null,
+        _updater: null,
         parent: null,
 
         xList: null,
@@ -9323,6 +9324,10 @@ tm.input = tm.input || {};
         // この値を超えると振ったことになる
         // 重力加速度を9.8と考えると何Gかかってるかで9.8*Gで計算できる
         threshold: 3 * 9.8,
+
+        //waitTime
+        // フレーム待機
+        waitTime:0,
 
         //振る速さ制限
         time: 10,
@@ -9365,14 +9370,30 @@ tm.input = tm.input || {};
         },
 
         update: function (e) {
-            return this
+            if (this.waitTime) { this.waitTime--; return this.clearShaking(); }
+
+            return this.clearShaking()
             .updateList('x')
             .updateList('y')
             .updateList('z');
         },
 
+        clearShaking: function () {
+            var s = this.shaking;
+            s.x = s.y = s.z = false;
+            return this;
+        },
+
+        // 振る速さ
         setTime: function (time) {
             this.time = time;
+            return this;
+        },
+
+        // n フレーム待機
+        wait: function (time) {
+            if (time < 0) time = 0;
+            this.waitTime = time;
             return this;
         },
 
@@ -9393,11 +9414,11 @@ tm.input = tm.input || {};
             var now = this.gravity[direction];
             list.push(now);
             var len = list.length;
+            var time = this.time;
+
             if (len === 1) return this;
-            if (len > this.time) {
-                list.shift();
-                --len;
-            }
+            for (; len > ++time;) list.shift();
+
             var v = Math.abs(list[0] - list[len - 1]);
             v = this.shaking[direction] = (v > this.threshold);
             if (v) {
@@ -9409,16 +9430,23 @@ tm.input = tm.input || {};
 
         //sceneのonenterframeイベントにupdateを引っ付ける
         addChildTo: function (scene) {
-            this.parent = scene;
-            var self = this;
-            scene.on('enterframe', this.temp = function (e) { self.update(e); });
+            this.remove().parent = scene;
+            scene.on('enterframe', tm.input.ShakeSensor.getUpdater(this));
             return this;
         },
 
         //sceneのonenterframeから削除
         remove: function () {
-            this.parent && this.parent.off(this.temp);
+            this.parent && this.parent.off('enterframe', this.temp);
+            this.parent = null;
             return this;
+        },
+
+
+    }).$extend({
+        //static
+        getUpdater: function (self) {
+            return self._updater || (self._updater = function (e) { self.update(e); });
         },
 
     }).prototype.accessor('g', {
@@ -10683,6 +10711,24 @@ tm.graphics = tm.graphics || {};
          */
         getElement: function() {
             return this.element;
+        },
+
+        /**
+         * 自分と同じ内容を描画したCanvas取得
+         */
+        clone: function (rate) {
+            rate = rate || 1;
+
+            var out = tm.graphics.Canvas();
+            var bg = this.element.style.background;
+            var width = this.width * rate,
+                height = this.height * rate;
+
+            out.resize(width, height);
+            bg && out.clearColor(this.element.style.background);
+            out.drawImage(this.element, 0, 0, this.width, this.height, 0, 0, width, height);
+
+            return out;
         },
     });
     
