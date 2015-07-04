@@ -115,7 +115,7 @@
             var time = this.time;
 
             if (len === 1) return this;
-            for (; len > time;) --len,list.shift();
+            for (; len > time; --len)list.shift();
 
             var v = Math.abs(list[0] - list[len - 1]);
             v = this.shaking[direction] = (v > this.threshold);
@@ -137,6 +137,12 @@
         remove: function () {
             this.parent && this.parent.off('enterframe', this._updater);
             this.parent = null;
+            return this;
+        },
+
+        //clear
+        clear: function () {
+            this.xList.length = this.yList.length = this.zList.length = 0;
             return this;
         },
 
